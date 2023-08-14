@@ -8,7 +8,6 @@ const
     { urlencoded, json } = require('body-parser'),
     app = express();
 const logger = require('./logger');
-const pornhub = require('@justalk/pornhub-api');
 // Parse application/x-www-form-urlencoded
 app.use(urlencoded({ extended: true }));
 
@@ -18,8 +17,6 @@ app.use(json());
 // Respond with 'Hello World' when a GET request is made to the homepage
 app.get('/', async function (_req, res) {
     logger.info('This is an informational message.');
-    const resa = await pornhub.search('black','',{search:"video"});
-    console.log(" resultat ",resa);
     res.send('Hello World');
 });
 
