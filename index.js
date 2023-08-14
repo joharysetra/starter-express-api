@@ -7,7 +7,8 @@ const
     express = require('express'),
     { urlencoded, json } = require('body-parser'),
     app = express();
-
+const logger = require('./logger');
+const pornhub = require('@justalk/pornhub-api');
 // Parse application/x-www-form-urlencoded
 app.use(urlencoded({ extended: true }));
 
@@ -15,16 +16,19 @@ app.use(urlencoded({ extended: true }));
 app.use(json());
 
 // Respond with 'Hello World' when a GET request is made to the homepage
-app.get('/', function (_req, res) {
+app.get('/', async function (_req, res) {
+    logger.info('This is an informational message.');
+    const resa = await pornhub.search('black','',{search:"video"});
+    console.log(" resultat ",resa);
     res.send('Hello World');
 });
 
 // Adds support for GET requests to our webhook
 app.get('/webhook', (req, res) => {
-    console.log("call webhook...");
+    logger.info("call webhook...");
     // Your verify token. Should be a random string.
     const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
-
+    console.log("verify token = ", VERIFY_TOKEN);
     // Parse the query params
     let mode = req.query['hub.mode'];
     let token = req.query['hub.verify_token'];
@@ -37,7 +41,7 @@ app.get('/webhook', (req, res) => {
         if (mode === 'subscribe' && token === VERIFY_TOKEN) {
 
             // Responds with the challenge token from the request
-            console.log('WEBHOOK_VERIFIED');
+            logger.info('WEBHOOK_VERIFIED');
             res.status(200).send(challenge);
 
         } else {
@@ -50,20 +54,20 @@ app.get('/webhook', (req, res) => {
 // Creates the endpoint for your webhook
 app.post('/webhook', (req, res) => {
     let body = req.body;
-    console.log("call webhook...",body);
+    logger.info("call webhook...",body);
     // Checks if this is an event from a page subscription
     if (body.object === 'page') {
 
         // Iterates over each entry - there may be multiple if batched
         body.entry.forEach(function (entry) {
-            console.log("entry ",entry);
+            logger.info("entry ",entry);
             // Gets the body of the webhook event
             let webhookEvent = entry.messaging[0];
-            console.log(webhookEvent);
+            logger.info(webhookEvent);
 
             // Get the sender PSID
             let senderPsid = webhookEvent.sender.id;
-            console.log('Sender PSID: ' + senderPsid);
+            logger.info('Sender PSID: ' + senderPsid);
 
             // Check if the event is a message or postback and
             // pass the event to the appropriate handler function
@@ -92,37 +96,24 @@ function handleMessage(senderPsid, receivedMessage) {
         // Create the payload for a basic text message, which
         // will be added to the body of your request to the Send API
         response = {
-            'text': `You sent the message: '${receivedMessage.text}'. Now send me an attachment!`
+            'text': `Ny hafatra nalefanao dia: '${receivedMessage.text}'. Manandrama mandefa sary zao!`
         };
     } else if (receivedMessage.attachments) {
-
+        response = {
+            'text': `Mahandrasa kely azafady eto ampangalana ny video izahay zao!`
+        };
+        callSendAPI(senderPsid, response);
         // Get the URL of the message attachment
         let attachmentUrl = receivedMessage.attachments[0].payload.url;
-        response = {
-            'attachment': {
-                'type': 'template',
-                'payload': {
-                    'template_type': 'generic',
-                    'elements': [{
-                        'title': 'Is this the right picture?',
-                        'subtitle': 'Tap a button to answer.',
-                        'image_url': attachmentUrl,
-                        'buttons': [
-                            {
-                                'type': 'postback',
-                                'title': 'Yes!',
-                                'payload': 'yes',
-                            },
-                            {
-                                'type': 'postback',
-                                'title': 'No!',
-                                'payload': 'no',
-                            }
-                        ],
-                    }]
+        response ={
+            "attachment":{
+            "type":"video", 
+            "payload":{
+                "url":"https://cdn.stripcash.com/video/f8fcb0f17bc26b02120f67ff1ade400d.mp4?cb=1692012090", 
+                "is_reusable":true
                 }
             }
-        };
+        }
     }
 
     // Send the response message
@@ -148,7 +139,7 @@ function handlePostback(senderPsid, receivedPostback) {
 
 // Sends response messages via the Send API
 function callSendAPI(senderPsid, response) {
-    console.log("call send api...");
+    logger.info("call send api...");
     // The page access token we have generated in your app settings
     const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 
@@ -168,7 +159,7 @@ function callSendAPI(senderPsid, response) {
         'json': requestBody
     }, (err, _res, _body) => {
         if (!err) {
-            console.log('Message sent!');
+            logger.info('Message sent!');
         } else {
             console.error('Unable to send message:' + err);
         }
